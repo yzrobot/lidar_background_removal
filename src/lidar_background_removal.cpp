@@ -33,7 +33,9 @@ nav_msgs::OccupancyGrid::ConstPtr map_;
 
 bool lookupTransform(const std::string &source_frame, tf::StampedTransform &transform) {
   try {
-    listener_->lookupTransform(map_frame_, source_frame, ros::Time(0), transform);
+    ros::Time now = ros::Time::now();
+    listener_->waitForTransform(map_frame_, source_frame, now, ros::Duration(0.1));
+    listener_->lookupTransform(map_frame_, source_frame, now, transform);
   } catch(tf::TransformException ex) {
     ROS_ERROR("-------> %s", ex.what());
     return false;
@@ -58,21 +60,28 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr &scan) {
       
       tf::pointMsgToTF(p, point_in_lidar);
       point_in_map = transform * point_in_lidar;
-      
+
       float x = (point_in_map.getX() - map_->info.origin.position.x) / map_->info.resolution;
       float y = (point_in_map.getY() - map_->info.origin.position.y) / map_->info.resolution;
+
       for(int j = x - inflation_; j <= x + inflation_; j++) {
-      	for(int k = y - inflation_; k <= y + inflation_; k++) {
-      	  if(map_->data[j + k * (int)map_->info.width] == 100) {
-      	    scan_filtered.ranges[i] = NAN;
+	for(int k = y - inflation_; k <= y + inflation_; k++) {
+	  int idx = j + k * (int)map_->info.width;
+	  if(idx >= map_->data.size()) {
+	    scan_filtered.ranges[i] = NAN;
 	    scan_filtered.intensities[i] = NAN;
-	    k = y + inflation_;
-	    j = x + inflation_;
-      	  }
-      	}
+	  } else {
+	    if(map_->data[idx] == 100 || map_->data[idx] == -1) {
+	      scan_filtered.ranges[i] = NAN;
+	      scan_filtered.intensities[i] = NAN;
+	      k = y + inflation_;
+	      j = x + inflation_;
+	    }
+	  }
+	}
       }
     }
-
+    
     lidar_filtered_pub_.publish(scan_filtered);
   }
 }
@@ -97,18 +106,27 @@ void pointCallback(const sensor_msgs::PointCloud2::ConstPtr &cloud) {
       
       float x = (point_in_map.getX() - map_->info.origin.position.x) / map_->info.resolution;
       float y = (point_in_map.getY() - map_->info.origin.position.y) / map_->info.resolution;
+
       for(int j = x - inflation_; j <= x + inflation_; j++) {
-      	for(int k = y - inflation_; k <= y + inflation_; k++) {
-      	  if(map_->data[j + k * (int)map_->info.width] == 100) {
-      	    pc.points.erase(pc.points.begin() + i);
-	    pc.channels.erase(pc.channels.begin() + i);
-  	    k = y + inflation_;
-  	    j = x + inflation_;
-      	  }
-      	}
+	for(int k = y - inflation_; k <= y + inflation_; k++) {
+	  int idx = j + k * (int)map_->info.width;
+	  if(idx >= map_->data.size()) {
+	    pc.points[i].x = NAN;
+	    pc.points[i].y = NAN;
+	    pc.points[i].z = NAN;
+	  } else {
+	    if(map_->data[idx] == 100 || map_->data[idx] == -1) {
+	      pc.points[i].x = NAN;
+	      pc.points[i].y = NAN;
+	      pc.points[i].z = NAN;
+	      k = y + inflation_;
+	      j = x + inflation_;
+	    }
+	  }
+	}
       }
     }
-
+    
     sensor_msgs::convertPointCloudToPointCloud2(pc, cloud_filtered);
     lidar_filtered_pub_.publish(cloud_filtered);
   }
