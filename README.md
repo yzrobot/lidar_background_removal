@@ -24,8 +24,17 @@ Ubuntu 20.04 LTS
 ROS Noetic
 ```
 
-## Citation 
+## Citation ##
 If you are considering using this code, please reference the following:
 ```
-Iaroslav, it's your turn now :)
+@article{io22software,
+   author  = {Iaroslav Okunevich and Vincent Hilaire and Stephane Galland and Olivier Lamotte and Liubov Shilova and Yassine Ruichek and Zhi Yan},
+   title   = {Software-hardware Integration and Human-centered Benchmarking for Socially-compliant Robot Navigation},
+   journal = {CoRR},
+   volume = {abs/2210.15628},
+   year = {2022},
+   url = {http://arxiv.org/abs/2210.15628},
+   archivePrefix = {arXiv},
+   eprint = {2210.15628}
+}
 ```
